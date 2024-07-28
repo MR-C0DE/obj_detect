@@ -1,0 +1,3 @@
+FPS: 30.0
+Car Stopped
+Objects detected: person

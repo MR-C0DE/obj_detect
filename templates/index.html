@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection Video Stream</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        header, footer {
+            background-color: #1a1a1a;
+            color: #fff;
+            text-align: center;
+            padding: 1em 0;
+           
+            width: 100%;
+           
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+  
+        .container {
+            padding: 2em 1em 2em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            letter-spacing: 1px;
+        }
+        .info {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: left;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .info p {
+            margin: 10px 0;
+        }
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            transition: flex-direction 0.3s;
+        }
+        .video-frame, .console {
+            flex: 1;
+            width: 100%;
+            max-width: 640px;
+            margin: 10px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .video-frame img {
+            width: 100%;
+            display: block;
+            transition: transform 0.3s ease-in-out;
+        }
+        .video-frame img:hover {
+            transform: scale(1.05);
+        }
+        .console {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            transition: background-color 0.3s, color 0.3s, height 0.3s;
+        }
+        .console p {
+            margin: 5px 0;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .controls button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .controls button:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .theme-toggle {
+            margin-top: 10px;
+            text-align: center;
+        }
+        .theme-toggle button {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: background-color 0.3s, color 0.3s, transform 0.3s;
+        }
+        .theme-toggle button:hover {
+            background: #555;
+            transform: translateY(-2px);
+        }
+        .dark-theme {
+            background-color: #1a1a1a;
+            color: #f4f4f9;
+        }
+        .dark-theme .info {
+            background: #333;
+            color: #f4f4f9;
+        }
+        .dark-theme .console {
+            background: #222;
+        }
+        .dark-theme .controls button {
+            background: #555;
+        }
+        .dark-theme .controls button:hover {
+            background: #777;
+        }
+        @media(min-width: 768px) {
+            .content {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: flex-start;
+            }
+            .video-frame, .console {
+                max-width: 48%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Object Detection Video Stream</h1>
+    </header>
+    <div class="container">
+        <div class="info" id="info">
+            <p><strong>FPS:</strong> <span id="fps">0</span></p>
+            <p><strong>State:</strong> <span id="state">No Data</span></p>
+            <p><strong>Objects Detected:</strong> <span id="objects">None</span></p>
+        </div>
+        <div class="content">
+            <div class="video-frame">
+                <img src="{{ url_for('video_feed') }}" alt="Video Feed">
+            </div>
+            <div class="console" id="console">
+                <p>Console Output:</p>
+            </div>
+        </div>
+        <div class="controls">
+            <button onclick="resetConsole()">Reset Console</button>
+        </div>
+        <div class="theme-toggle">
+            <button onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2024 Andre Mulaja. All rights reserved.</p>
+    </footer>
+    <script>
+        function fetchStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('fps').innerText = data.fps;
+                    document.getElementById('state').innerText = data.state;
+                    document.getElementById('objects').innerText = data.objects.join(', ') || 'None';
+
+                    var consoleDiv = document.getElementById('console');
+                    var message = document.createElement('p');
+                    message.innerText = data.state + ' | FPS: ' + data.fps + ' | Objects: ' + data.objects.join(', ');
+                    consoleDiv.appendChild(message);
+                    consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                });
+        }
+
+        function resetConsole() {
+            fetch('/reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('console').innerHTML = '<p>Console Output:</p>';
+                });
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle('dark-theme');
+        }
+
+        setInterval(fetchStatus, 1000);
+    </script>
+</body>
+</html>
